@@ -1,0 +1,63 @@
+// This project is a Pine Script implementation for TradingView that allows users to manually log options trades into a live table overlay on a chart.
+
+//@version=6
+indicator("Manual Trade Ledger", overlay=true)
+
+// === Toggle to log a trade ===
+logNow = input.bool(false, "Log Trade")
+
+// === Inputs ===
+logEntry = input.bool(false, "Log Buy to Open")
+logExit = input.bool(false, "Log Sell to Close")
+
+ticker       = input.string("", "Ticker")
+premium     = input.float(1.0, "Option Premium")
+contracts   = input.int(1, "Contracts")
+position    = input.string("Call", "Position Type", options=["Call", "Put"])
+strike      = input.int(1, "Strike Price")
+expiry      = input.string("", "Expiry Date")
+notes       = input.string("", "Notes")
+
+// === Persistent Variables ===
+var table journal = table.new(position.top_right, 10, 50, border_width=1)
+var int row = 1
+var float firstLoggedPrice = na  // for % change reference
+
+// === Header Row ===
+if bar_index == 0
+    table.cell(journal, 0, 0, "Ticker")
+    table.cell(journal, 1, 0, "Premium")
+    table.cell(journal, 2, 0, "Contracts")
+    table.cell(journal, 3, 0, "Position")
+    table.cell(journal, 4, 0, "Strike")
+    table.cell(journal, 5, 0, "Expiry")
+    table.cell(journal, 6, 0, "Notes")
+    table.cell(journal, 7, 0, "Time")
+    table.cell(journal, 8, 0, "Price")
+    table.cell(journal, 9, 0, "% Change")
+
+// === Log new row ===
+if (logNow and row < 50)
+    timestamp = str.tostring(year) + "-" + str.tostring(month) + "-" + str.tostring(dayofmonth) + " " + str.tostring(hour) + ":" + str.tostring(minute)
+    price = close
+
+    // First time logging, store the baseline price
+    if na(firstLoggedPrice)
+        firstLoggedPrice := price
+
+    pctChange = ((price - firstLoggedPrice) / firstLoggedPrice) * 100
+    pctChangeStr = str.tostring(pctChange, "#.##") + "%"
+
+    // Fill in the table row
+    table.cell(journal, 0, row, ticker)
+    table.cell(journal, 1, row, str.tostring(premium))
+    table.cell(journal, 2, row, str.tostring(contracts))
+    table.cell(journal, 3, row, position)
+    table.cell(journal, 4, row, str.tostring(strike))
+    table.cell(journal, 5, row, expiry)
+    table.cell(journal, 6, row, notes)
+    table.cell(journal, 7, row, timestamp)
+    table.cell(journal, 8, row, str.tostring(price, format.mintick))
+    table.cell(journal, 9, row, pctChangeStr)
+
+    row := row + 1
